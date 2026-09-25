@@ -182,7 +182,7 @@ function ComplaintsPanel() {
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const load = () => api.get("/complaints/mine").then((res) => setComplaints(res.data.complaints)).catch(() => {});
+  const load = () => { api.get("/complaints/mine").then((res) => setComplaints(res.data.complaints)).catch(() => {}); };
   useEffect(load, []);
 
   const submit = async (e) => {

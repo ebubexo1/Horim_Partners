@@ -194,7 +194,7 @@ function Partners() {
 
 function Complaints() {
   const [complaints, setComplaints] = useState([]);
-  const load = () => api.get("/admin/complaints").then((res) => setComplaints(res.data.complaints)).catch(() => {});
+  const load = () => { api.get("/admin/complaints").then((res) => setComplaints(res.data.complaints)).catch(() => {}); };
   useEffect(load, []);
 
   const updateStatus = async (id, status) => {
@@ -235,7 +235,7 @@ function Complaints() {
 
 function BankAccounts() {
   const [accounts, setAccounts] = useState([]);
-  const load = () => api.get("/admin/bank-accounts").then((res) => setAccounts(res.data.accounts)).catch(() => {});
+  const load = () => { api.get("/admin/bank-accounts").then((res) => setAccounts(res.data.accounts)).catch(() => {}); };
   useEffect(load, []);
 
   const save = async (acc) => {
@@ -283,7 +283,7 @@ function BankAccountForm({ initial, onSave }) {
 
 function PartnershipLevels() {
   const [levels, setLevels] = useState([]);
-  const load = () => api.get("/admin/partnership-levels").then((res) => setLevels(res.data.levels)).catch(() => {});
+  const load = () => { api.get("/admin/partnership-levels").then((res) => setLevels(res.data.levels)).catch(() => {}); };
   useEffect(load, []);
 
   const defaults = [
