@@ -3,7 +3,7 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import ChangePasswordForm from "../components/ChangePasswordForm";
 
-const TABS = ["overview", "donations", "partners", "complaints", "bank accounts", "partnership levels", "account"];
+const TABS = ["overview", "donations", "partners", "complaints", "bank accounts", "partnership levels", "staff", "account"];
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState("overview");
@@ -36,7 +36,80 @@ export default function AdminDashboard() {
       {tab === "complaints" && <Complaints />}
       {tab === "bank accounts" && <BankAccounts />}
       {tab === "partnership levels" && <PartnershipLevels />}
+      {tab === "staff" && <Staff />}
       {tab === "account" && <ChangePasswordForm />}
+    </div>
+  );
+}
+
+function Staff() {
+  const { user } = useAuth();
+  const [staff, setStaff] = useState([]);
+  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "admin" });
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const load = () => { api.get("/admin/staff").then((res) => setStaff(res.data.staff)).catch(() => {}); };
+  useEffect(load, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    try {
+      await api.post("/admin/staff", form);
+      setMsg(`${form.name} was added as ${form.role.replace("_", " ")}.`);
+      setForm({ name: "", email: "", password: "", role: "admin" });
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not create staff account.");
+    }
+  };
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="card">
+        <p className="text-sm text-gray-500">Only a Super Admin can view or add staff accounts.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <div className="card">
+        <h3 className="mb-4 font-bold text-navy">Add Admin / Support Staff</h3>
+        <form onSubmit={submit} className="space-y-3">
+          <input className="input" placeholder="Full Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <input type="email" className="input" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          <input type="password" className="input" placeholder="Temporary Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
+          <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+            <option value="admin">Admin — manage partners, donations, complaints</option>
+            <option value="support">Support — manage complaints only</option>
+            <option value="super_admin">Super Admin — full access, incl. adding staff</option>
+          </select>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {msg && <p className="text-sm text-green-600">{msg}</p>}
+          <button className="btn-navy w-full">Add Staff Member</button>
+        </form>
+        <p className="mt-3 text-xs text-gray-400">They should change this password after their first login (Account tab).</p>
+      </div>
+
+      <div className="card">
+        <h3 className="mb-4 font-bold text-navy">Current Staff</h3>
+        <ul className="space-y-2">
+          {staff.map((s) => (
+            <li key={s._id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 text-sm">
+              <div>
+                <p className="font-medium text-navy">{s.name}</p>
+                <p className="text-xs text-gray-500">{s.email}</p>
+              </div>
+              <span className="rounded-full bg-navy px-3 py-1 text-xs font-semibold capitalize text-white">{s.role.replace("_", " ")}</span>
+            </li>
+          ))}
+          {staff.length === 0 && <p className="text-sm text-gray-400">No staff yet.</p>}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -194,6 +267,7 @@ function Partners() {
 
 function Complaints() {
   const [complaints, setComplaints] = useState([]);
+  const [openId, setOpenId] = useState(null);
   const load = () => { api.get("/admin/complaints").then((res) => setComplaints(res.data.complaints)).catch(() => {}); };
   useEffect(load, []);
 
@@ -203,32 +277,121 @@ function Complaints() {
   };
 
   return (
-    <div className="card overflow-x-auto">
-      <h3 className="mb-4 font-bold text-navy">Complaints / Support Tickets</h3>
-      <table className="min-w-full text-left text-sm">
-        <thead><tr className="border-b text-gray-500"><th className="pb-2">Ticket</th><th>Subject</th><th>From</th><th>Category</th><th>Priority</th><th>Status</th></tr></thead>
-        <tbody>
-          {complaints.map((c) => (
-            <tr key={c._id} className="border-b last:border-0">
-              <td className="py-2 font-mono text-xs">{c.ticketNumber}</td>
-              <td>{c.subject}</td>
-              <td>{c.user?.name}</td>
-              <td className="capitalize">{c.category}</td>
-              <td className="capitalize">{c.priority}</td>
-              <td>
-                <select className="input !w-auto !py-1 text-xs" value={c.status} onChange={(e) => updateStatus(c._id, e.target.value)}>
-                  <option value="open">Open</option>
-                  <option value="under_review">Under Review</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </td>
-            </tr>
-          ))}
-          {complaints.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-gray-400">No complaints found.</td></tr>}
-        </tbody>
-      </table>
+    <div>
+      <div className="card overflow-x-auto">
+        <h3 className="mb-4 font-bold text-navy">Complaints / Support Tickets</h3>
+        <table className="min-w-full text-left text-sm">
+          <thead><tr className="border-b text-gray-500"><th className="pb-2">Ticket</th><th>Subject</th><th>From</th><th>Category</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {complaints.map((c) => (
+              <tr key={c._id} className="border-b last:border-0">
+                <td className="py-2 font-mono text-xs">{c.ticketNumber}</td>
+                <td>{c.subject}</td>
+                <td>{c.user?.name}</td>
+                <td className="capitalize">{c.category}</td>
+                <td className="capitalize">{c.priority}</td>
+                <td>
+                  <select className="input !w-auto !py-1 text-xs" value={c.status} onChange={(e) => updateStatus(c._id, e.target.value)}>
+                    <option value="open">Open</option>
+                    <option value="under_review">Under Review</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </td>
+                <td>
+                  <button onClick={() => setOpenId(c._id)} className="text-xs font-semibold text-accentblue hover:underline">Open Ticket</button>
+                </td>
+              </tr>
+            ))}
+            {complaints.length === 0 && <tr><td colSpan={7} className="py-6 text-center text-gray-400">No complaints found.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {openId && (
+        <TicketThread
+          id={openId}
+          onClose={() => { setOpenId(null); load(); }}
+          onStatusChange={(status) => updateStatus(openId, status)}
+        />
+      )}
+    </div>
+  );
+}
+
+function TicketThread({ id, onClose, onStatusChange }) {
+  const [data, setData] = useState(null);
+  const [reply, setReply] = useState("");
+  const [internalNote, setInternalNote] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const load = () => api.get(`/complaints/${id}`).then((res) => setData(res.data)).catch(() => {});
+  useEffect(() => { load(); }, [id]);
+
+  const sendReply = async (e) => {
+    e.preventDefault();
+    if (!reply.trim()) return;
+    setSending(true);
+    try {
+      await api.post(`/complaints/${id}/messages`, { message: reply, isInternalNote: internalNote });
+      setReply("");
+      setInternalNote(false);
+      load();
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!data) return null;
+  const { complaint, messages } = data;
+
+  return (
+    <div className="card mt-4 max-w-2xl">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h4 className="font-bold text-navy">{complaint.subject}</h4>
+          <p className="text-xs text-gray-400">#{complaint.ticketNumber} · {complaint.user?.name} · {complaint.user?.email}</p>
+        </div>
+        <button onClick={onClose} className="text-sm text-gray-400 hover:text-navy">✕ Close</button>
+      </div>
+
+      <p className="mb-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{complaint.description}</p>
+
+      <div className="mb-4 max-h-64 space-y-2 overflow-y-auto">
+        {messages.map((m) => (
+          <div key={m._id} className={`rounded-lg p-2.5 text-sm ${m.isInternalNote ? "bg-amber-50 border border-amber-200" : "bg-accentblue/5"}`}>
+            <p className="text-xs font-semibold text-navy">
+              {m.sender?.name} {m.isInternalNote && <span className="text-amber-600">(internal note)</span>}
+            </p>
+            <p className="text-gray-700">{m.message}</p>
+          </div>
+        ))}
+        {messages.length === 0 && <p className="text-sm text-gray-400">No replies yet.</p>}
+      </div>
+
+      <form onSubmit={sendReply} className="space-y-2">
+        <textarea className="input" rows={2} placeholder="Write a reply…" value={reply} onChange={(e) => setReply(e.target.value)} />
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-xs text-gray-500">
+            <input type="checkbox" checked={internalNote} onChange={(e) => setInternalNote(e.target.checked)} /> Internal note (partner won't see this)
+          </label>
+          <button disabled={sending} className="btn-navy !px-4 !py-2 text-sm">{sending ? "Sending…" : "Send Reply"}</button>
+        </div>
+      </form>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+        <span className="text-xs text-gray-500">Quick status:</span>
+        {["open", "under_review", "in_progress", "resolved", "closed"].map((s) => (
+          <button
+            key={s}
+            onClick={() => onStatusChange(s)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${complaint.status === s ? "bg-navy text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          >
+            {s.replace("_", " ")}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

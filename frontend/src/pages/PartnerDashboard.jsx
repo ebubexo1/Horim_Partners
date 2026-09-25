@@ -181,6 +181,7 @@ function ComplaintsPanel() {
   const [form, setForm] = useState({ subject: "", category: "general", description: "", priority: "medium", preferredContactMethod: "email" });
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState("");
+  const [openId, setOpenId] = useState(null);
 
   const load = () => { api.get("/complaints/mine").then((res) => setComplaints(res.data.complaints)).catch(() => {}); };
   useEffect(load, []);
@@ -239,16 +240,64 @@ function ComplaintsPanel() {
 
       <ul className="space-y-2">
         {complaints.map((c) => (
-          <li key={c._id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 text-sm">
-            <div>
-              <p className="font-semibold text-navy">{c.subject}</p>
-              <p className="text-xs text-gray-400">#{c.ticketNumber} · {new Date(c.createdAt).toLocaleDateString()}</p>
-            </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_COLOR[c.status]}`}>{c.status.replace("_", " ")}</span>
+          <li key={c._id}>
+            <button
+              onClick={() => setOpenId(openId === c._id ? null : c._id)}
+              className="flex w-full items-center justify-between rounded-lg border border-gray-100 p-3 text-left text-sm hover:border-accentblue"
+            >
+              <div>
+                <p className="font-semibold text-navy">{c.subject}</p>
+                <p className="text-xs text-gray-400">#{c.ticketNumber} · {new Date(c.createdAt).toLocaleDateString()}</p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_COLOR[c.status]}`}>{c.status.replace("_", " ")}</span>
+            </button>
+            {openId === c._id && <TicketThreadReadOnly id={c._id} />}
           </li>
         ))}
         {complaints.length === 0 && <p className="text-sm text-gray-400">No complaints submitted yet.</p>}
       </ul>
+    </div>
+  );
+}
+
+function TicketThreadReadOnly({ id }) {
+  const [data, setData] = useState(null);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const load = () => api.get(`/complaints/${id}`).then((res) => setData(res.data)).catch(() => {});
+  useEffect(() => { load(); }, [id]);
+
+  const sendReply = async (e) => {
+    e.preventDefault();
+    if (!reply.trim()) return;
+    setSending(true);
+    try {
+      await api.post(`/complaints/${id}/messages`, { message: reply });
+      setReply("");
+      load();
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!data) return null;
+
+  return (
+    <div className="mt-2 rounded-lg bg-gray-50 p-3">
+      <div className="mb-2 space-y-2">
+        {data.messages.map((m) => (
+          <div key={m._id} className="rounded-lg bg-white p-2 text-sm shadow-sm">
+            <p className="text-xs font-semibold text-navy">{m.sender?.name}</p>
+            <p className="text-gray-700">{m.message}</p>
+          </div>
+        ))}
+        {data.messages.length === 0 && <p className="text-xs text-gray-400">No replies yet — support will respond here.</p>}
+      </div>
+      <form onSubmit={sendReply} className="flex gap-2">
+        <input className="input" placeholder="Add a reply…" value={reply} onChange={(e) => setReply(e.target.value)} />
+        <button disabled={sending} className="btn-navy !px-4 !py-2 text-sm shrink-0">{sending ? "…" : "Send"}</button>
+      </form>
     </div>
   );
 }

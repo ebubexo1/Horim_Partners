@@ -1,6 +1,7 @@
 const Complaint = require("../models/Complaint");
 const ComplaintMessage = require("../models/ComplaintMessage");
 const Notification = require("../models/Notification");
+const User = require("../models/User");
 const generateTicketNumber = require("../utils/ticketNumber");
 
 // @desc Submit a complaint/support ticket (logged-in partner)
@@ -21,6 +22,19 @@ const createComplaint = async (req, res, next) => {
       priority,
       preferredContactMethod,
     });
+
+    // Notify every admin/support staff member so complaints don't go unseen
+    const staff = await User.find({ role: { $in: ["admin", "super_admin", "support"] } }).select("_id");
+    if (staff.length > 0) {
+      await Notification.insertMany(
+        staff.map((s) => ({
+          user: s._id,
+          title: "New complaint submitted",
+          message: `${req.user.name} submitted a new ticket: "${subject}" (#${complaint.ticketNumber})`,
+          type: "complaint",
+        }))
+      );
+    }
 
     res.status(201).json({ success: true, complaint });
   } catch (err) {
