@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import ChangePasswordForm from "../components/ChangePasswordForm";
 
-const TABS = ["overview", "donations", "partners", "complaints", "bank accounts", "partnership levels"];
+const TABS = ["overview", "donations", "partners", "complaints", "bank accounts", "partnership levels", "account"];
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState("overview");
@@ -35,6 +36,7 @@ export default function AdminDashboard() {
       {tab === "complaints" && <Complaints />}
       {tab === "bank accounts" && <BankAccounts />}
       {tab === "partnership levels" && <PartnershipLevels />}
+      {tab === "account" && <ChangePasswordForm />}
     </div>
   );
 }

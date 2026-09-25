@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import ChangePasswordForm from "../components/ChangePasswordForm";
 
 const LEVEL_COLOR = { bronze: "bg-amber-700", silver: "bg-gray-400", gold: "bg-gold", platinum: "bg-accentblue", freewill: "bg-navy" };
 
@@ -53,7 +54,7 @@ export default function PartnerDashboard() {
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200">
-        {["overview", "payments", "network", "notifications", "complaints"].map((t) => (
+        {["overview", "payments", "network", "notifications", "complaints", "account"].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -107,10 +108,10 @@ export default function PartnerDashboard() {
             <Link to="/become-a-partner" className="card block text-center hover:border-accentblue">
               <p className="font-semibold text-navy">Change Partnership Level</p>
             </Link>
-            <div className="card">
-              <p className="font-semibold text-navy">Update Profile</p>
-              <p className="mt-1 text-xs text-gray-500">Coming soon — contact support to update your details.</p>
-            </div>
+            <button onClick={() => setTab("account")} className="card block w-full text-left hover:border-accentblue">
+              <p className="font-semibold text-navy">Update Profile / Password</p>
+              <p className="mt-1 text-xs text-gray-500">Go to the Account tab to change your password.</p>
+            </button>
           </div>
         </div>
       )}
@@ -170,6 +171,7 @@ export default function PartnerDashboard() {
       )}
 
       {tab === "complaints" && <ComplaintsPanel />}
+      {tab === "account" && <ChangePasswordForm />}
     </div>
   );
 }
