@@ -67,6 +67,7 @@ app.use("/api/bank-accounts", bankAccountRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/dev", require("./src/routes/devRoutes"));
 
 app.use(notFound);
 app.use(errorHandler);
