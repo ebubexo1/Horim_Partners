@@ -3,7 +3,7 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import ChangePasswordForm from "../components/ChangePasswordForm";
 
-const TABS = ["overview", "donations", "partners", "complaints", "bank accounts", "partnership levels", "staff", "account"];
+const TABS = ["overview", "donations", "partners", "complaints", "notifications", "bank accounts", "partnership levels", "staff", "account"];
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState("overview");
@@ -34,10 +34,47 @@ export default function AdminDashboard() {
       {tab === "donations" && <Donations />}
       {tab === "partners" && <Partners />}
       {tab === "complaints" && <Complaints />}
+      {tab === "notifications" && <AdminNotifications />}
       {tab === "bank accounts" && <BankAccounts />}
       {tab === "partnership levels" && <PartnershipLevels />}
       {tab === "staff" && <Staff />}
       {tab === "account" && <ChangePasswordForm />}
+    </div>
+  );
+}
+
+function AdminNotifications() {
+  const [notifications, setNotifications] = useState([]);
+  const load = () => { api.get("/notifications").then((res) => setNotifications(res.data.notifications)).catch(() => {}); };
+  useEffect(load, []);
+
+  const markRead = async (id) => {
+    await api.put(`/notifications/${id}/read`);
+    load();
+  };
+
+  const unreadCount = notifications.filter((n) => !n.readStatus).length;
+
+  return (
+    <div className="card">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="font-bold text-navy">Notifications</h3>
+        {unreadCount > 0 && <span className="rounded-full bg-gold px-3 py-1 text-xs font-bold text-navy-dark">{unreadCount} unread</span>}
+      </div>
+      <ul className="space-y-2">
+        {notifications.map((n) => (
+          <li
+            key={n._id}
+            onClick={() => !n.readStatus && markRead(n._id)}
+            className={`cursor-pointer rounded-lg border p-3 text-sm ${n.readStatus ? "border-gray-100" : "border-gold/40 bg-gold/5"}`}
+          >
+            <p className="font-semibold text-navy">{n.title}</p>
+            <p className="text-gray-600">{n.message}</p>
+            <p className="mt-1 text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</p>
+          </li>
+        ))}
+        {notifications.length === 0 && <p className="text-sm text-gray-400">No notifications yet.</p>}
+      </ul>
     </div>
   );
 }
