@@ -4,7 +4,10 @@ const Notification = require("../models/Notification");
 // @route GET /api/notifications
 const getMyNotifications = async (req, res, next) => {
   try {
-    const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(50);
+    const notifications = await Notification.find({ user: req.user._id })
+      .populate("relatedComplaint", "ticketNumber status")
+      .sort({ createdAt: -1 })
+      .limit(50);
     res.json({ success: true, notifications });
   } catch (err) {
     next(err);

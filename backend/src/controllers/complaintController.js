@@ -32,6 +32,7 @@ const createComplaint = async (req, res, next) => {
           title: "New complaint submitted",
           message: `${req.user.name} submitted a new ticket: "${subject}" (#${complaint.ticketNumber})`,
           type: "complaint",
+          relatedComplaint: complaint._id,
         }))
       );
     }
@@ -106,6 +107,7 @@ const addMessage = async (req, res, next) => {
         title: `Update on ticket ${complaint.ticketNumber}`,
         message: "Support has replied to your complaint.",
         type: "complaint",
+        relatedComplaint: complaint._id,
       });
     }
 
@@ -156,6 +158,7 @@ const updateComplaint = async (req, res, next) => {
         title: `Ticket ${complaint.ticketNumber} updated`,
         message: `Your complaint status is now: ${status.replace("_", " ")}`,
         type: "complaint",
+        relatedComplaint: complaint._id,
       });
     }
 

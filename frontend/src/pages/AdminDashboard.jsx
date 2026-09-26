@@ -7,7 +7,13 @@ const TABS = ["overview", "donations", "partners", "complaints", "notifications"
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState("overview");
+  const [jumpToTicketId, setJumpToTicketId] = useState(null);
   const { user } = useAuth();
+
+  const openTicketFromNotification = (complaintId) => {
+    setJumpToTicketId(complaintId);
+    setTab("complaints");
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -33,8 +39,8 @@ export default function AdminDashboard() {
       {tab === "overview" && <Overview />}
       {tab === "donations" && <Donations />}
       {tab === "partners" && <Partners />}
-      {tab === "complaints" && <Complaints />}
-      {tab === "notifications" && <AdminNotifications />}
+      {tab === "complaints" && <Complaints initialOpenId={jumpToTicketId} onInitialOpenHandled={() => setJumpToTicketId(null)} />}
+      {tab === "notifications" && <AdminNotifications onOpenComplaint={openTicketFromNotification} />}
       {tab === "bank accounts" && <BankAccounts />}
       {tab === "partnership levels" && <PartnershipLevels />}
       {tab === "staff" && <Staff />}
@@ -43,7 +49,7 @@ export default function AdminDashboard() {
   );
 }
 
-function AdminNotifications() {
+function AdminNotifications({ onOpenComplaint }) {
   const [notifications, setNotifications] = useState([]);
   const load = () => { api.get("/notifications").then((res) => setNotifications(res.data.notifications)).catch(() => {}); };
   useEffect(load, []);
@@ -51,6 +57,11 @@ function AdminNotifications() {
   const markRead = async (id) => {
     await api.put(`/notifications/${id}/read`);
     load();
+  };
+
+  const handleClick = (n) => {
+    if (!n.readStatus) markRead(n._id);
+    if (n.relatedComplaint?._id) onOpenComplaint?.(n.relatedComplaint._id);
   };
 
   const unreadCount = notifications.filter((n) => !n.readStatus).length;
@@ -65,12 +76,15 @@ function AdminNotifications() {
         {notifications.map((n) => (
           <li
             key={n._id}
-            onClick={() => !n.readStatus && markRead(n._id)}
-            className={`cursor-pointer rounded-lg border p-3 text-sm ${n.readStatus ? "border-gray-100" : "border-gold/40 bg-gold/5"}`}
+            onClick={() => handleClick(n)}
+            className={`cursor-pointer rounded-lg border p-3 text-sm transition hover:border-accentblue ${n.readStatus ? "border-gray-100" : "border-gold/40 bg-gold/5"}`}
           >
             <p className="font-semibold text-navy">{n.title}</p>
             <p className="text-gray-600">{n.message}</p>
-            <p className="mt-1 text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</p>
+            <div className="mt-1 flex items-center justify-between">
+              <p className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</p>
+              {n.relatedComplaint?._id && <span className="text-xs font-semibold text-accentblue">Open ticket →</span>}
+            </div>
           </li>
         ))}
         {notifications.length === 0 && <p className="text-sm text-gray-400">No notifications yet.</p>}
@@ -302,11 +316,18 @@ function Partners() {
   );
 }
 
-function Complaints() {
+function Complaints({ initialOpenId, onInitialOpenHandled }) {
   const [complaints, setComplaints] = useState([]);
   const [openId, setOpenId] = useState(null);
   const load = () => { api.get("/admin/complaints").then((res) => setComplaints(res.data.complaints)).catch(() => {}); };
   useEffect(load, []);
+
+  useEffect(() => {
+    if (initialOpenId) {
+      setOpenId(initialOpenId);
+      onInitialOpenHandled?.();
+    }
+  }, [initialOpenId]);
 
   const updateStatus = async (id, status) => {
     await api.put(`/admin/complaints/${id}`, { status });

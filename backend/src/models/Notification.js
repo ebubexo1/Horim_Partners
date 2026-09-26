@@ -11,6 +11,7 @@ const notificationSchema = new mongoose.Schema(
       default: "announcement",
     },
     readStatus: { type: Boolean, default: false },
+    relatedComplaint: { type: mongoose.Schema.Types.ObjectId, ref: "Complaint", default: null },
   },
   { timestamps: true }
 );
